@@ -1,0 +1,17 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debate Platform</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Debate Platform</h1>
+        <div class="options">
+            <a href="{{ url_for('create_debate') }}" class="btn">Create Debate</a>
+            <a href="{{ url_for('join_debate') }}" class="btn">Join Debate</a>
+        </div>
+    </div>
+</body>
+</html>

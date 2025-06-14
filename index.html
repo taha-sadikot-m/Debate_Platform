@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debate Platform - Structured Discussions</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #2c3e50);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+        
+        .header {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .logo i {
+            font-size: 1.8rem;
+            color: #3498db;
+        }
+        
+        .logo h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        
+        .main-container {
+            display: flex;
+            flex: 1;
+            padding: 20px;
+            gap: 20px;
+        }
+        
+        .participants-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .participant {
+            background: rgba(30, 30, 46, 0.8);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+            height: 100%;
+        }
+        
+        .participant.active {
+            border: 3px solid #3498db;
+            box-shadow: 0 0 15px rgba(52, 152, 219, 0.7);
+        }
+        
+        .participant-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .participant-name {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .participant-name h2 {
+            font-size: 1.3rem;
+        }
+        
+        .participant-name .role {
+            background: #3498db;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.9rem;
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #e74c3c;
+        }
+        
+        .status-indicator.active {
+            background: #2ecc71;
+        }
+        
+        .video-container {
+            flex: 1;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .video-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            background: #111;
+        }
+        
+        .video-placeholder i {
+            font-size: 3rem;
+            color: #3498db;
+        }
+        
+        .video-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 15px 0;
+        }
+        
+        .control-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(52, 152, 219, 0.2);
+            border: none;
+            color: #fff;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        
+        .control-btn:hover {
+            background: rgba(52, 152, 219, 0.4);
+            transform: scale(1.1);
+        }
+        
+        .control-btn.active {
+            background: #e74c3c;
+        }
+        
+        .turn-indicator {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            background: rgba(46, 204, 113, 0.9);
+            padding: 8px;
+            font-weight: bold;
+            border-radius: 5px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 0.8; }
+            50% { opacity: 1; }
+            100% { opacity: 0.8; }
+        }
+        
+        .chat-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: rgba(30, 30, 46, 0.8);
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .chat-header {
+            padding: 15px 20px;
+            background: rgba(0, 0, 0, 0.4);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .message {
+            max-width: 80%;
+            padding: 15px;
+            border-radius: 15px;
+            position: relative;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .message.received {
+            background: rgba(52, 152, 219, 0.2);
+            align-self: flex-start;
+            border-bottom-left-radius: 5px;
+        }
+        
+        .message.sent {
+            background: rgba(46, 204, 113, 0.2);
+            align-self: flex-end;
+            border-bottom-right-radius: 5px;
+        }
+        
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        .message-content {
+            line-height: 1.5;
+        }
+        
+        .system-message {
+            align-self: center;
+            background: rgba(155, 89, 182, 0.2);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            margin: 10px 0;
+        }
+        
+        .chat-input {
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.4);
+            display: flex;
+            gap: 10px;
+        }
+        
+        .chat-input textarea {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 25px;
+            padding: 12px 20px;
+            color: white;
+            resize: none;
+            min-height: 50px;
+            max-height: 150px;
+        }
+        
+        .chat-input button {
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .chat-input button:hover {
+            background: #2980b9;
+        }
+        
+        .controls-section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 300px;
+        }
+        
+        .timer-container {
+            background: rgba(30, 30, 46, 0.8);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .timer-display {
+            font-size: 3rem;
+            font-weight: bold;
+            margin: 15px 0;
+            color: #2ecc71;
+            text-shadow: 0 0 10px rgba(46, 204, 113, 0.5);
+        }
+        
+        .timer-controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .timer-btn {
+            padding: 8px 15px;
+            background: rgba(52, 152, 219, 0.2);
+            border: none;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .timer-btn:hover {
+            background: rgba(52, 152, 219, 0.4);
+        }
+        
+        .action-buttons {
+            background: rgba(30, 30, 46, 0.8);
+            border-radius: 15px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .action-btn {
+            padding: 15px;
+            border-radius: 10px;
+            border: none;
+            background: rgba(52, 152, 219, 0.3);
+            color: white;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.3s;
+        }
+        
+        .action-btn:hover {
+            background: rgba(52, 152, 219, 0.5);
+            transform: translateY(-2px);
+        }
+        
+        .action-btn.speak {
+            background: rgba(46, 204, 113, 0.3);
+        }
+        
+        .action-btn.speak:hover {
+            background: rgba(46, 204, 113, 0.5);
+        }
+        
+        .action-btn.end {
+            background: rgba(231, 76, 60, 0.3);
+        }
+        
+        .action-btn.end:hover {
+            background: rgba(231, 76, 60, 0.5);
+        }
+        
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .action-btn.active {
+            box-shadow: 0 0 15px rgba(52, 152, 219, 0.7);
+            background: rgba(52, 152, 219, 0.7);
+        }
+        
+        .action-btn.speak.active {
+            box-shadow: 0 0 15px rgba(46, 204, 113, 0.7);
+            background: rgba(46, 204, 113, 0.7);
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #2ecc71;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            transform: translateX(200%);
+            transition: transform 0.3s ease;
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        @media (max-width: 1200px) {
+            .main-container {
+                flex-direction: column;
+            }
+            
+            .controls-section {
+                width: 100%;
+                flex-direction: row;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 10px;
+            }
+            
+            .participants-section {
+                flex-direction: column;
+            }
+            
+            .controls-section {
+                flex-direction: column;
+            }
+            
+            .timer-display {
+                font-size: 2.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Notification System -->
+    <div class="notification" id="notification">
+        <i class="fas fa-info-circle"></i> <span id="notification-text">Notification message</span>
+    </div>
+    
+    <!-- Header -->
+    <div class="header">
+        <div class="logo">
+            <i class="fas fa-microphone-alt"></i>
+            <h1>Debate Platform</h1>
+        </div>
+        <div class="user-info">
+            <span><i class="fas fa-user"></i> John Doe (Moderator)</span>
+        </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="main-container">
+        <!-- Participants Section -->
+        <div class="participants-section">
+            <!-- Participant 1 -->
+            <div class="participant active" id="participant-1">
+                <div class="participant-header">
+                    <div class="participant-name">
+                        <h2>Alex Johnson</h2>
+                        <span class="role">For the Motion</span>
+                    </div>
+                    <div class="status">
+                        <span>Speaking</span>
+                        <div class="status-indicator active"></div>
+                    </div>
+                </div>
+                
+                <div class="video-container">
+                    <div class="video-placeholder">
+                        <i class="fas fa-video"></i>
+                        <p>Video feed is active</p>
+                    </div>
+                    <div class="turn-indicator">CURRENT SPEAKER</div>
+                </div>
+                
+                <div class="video-controls">
+                    <button class="control-btn" id="mic-btn-1">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <button class="control-btn" id="cam-btn-1">
+                        <i class="fas fa-video"></i>
+                    </button>
+                    <button class="control-btn" id="vol-btn-1">
+                        <i class="fas fa-volume-up"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Participant 2 -->
+            <div class="participant" id="participant-2">
+                <div class="participant-header">
+                    <div class="participant-name">
+                        <h2>Sarah Williams</h2>
+                        <span class="role">Against the Motion</span>
+                    </div>
+                    <div class="status">
+                        <span>Listening</span>
+                        <div class="status-indicator"></div>
+                    </div>
+                </div>
+                
+                <div class="video-container">
+                    <div class="video-placeholder">
+                        <i class="fas fa-video"></i>
+                        <p>Video feed is active</p>
+                    </div>
+                </div>
+                
+                <div class="video-controls">
+                    <button class="control-btn" id="mic-btn-2">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <button class="control-btn" id="cam-btn-2">
+                        <i class="fas fa-video"></i>
+                    </button>
+                    <button class="control-btn" id="vol-btn-2">
+                        <i class="fas fa-volume-up"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Chat Section -->
+        <div class="chat-section">
+            <div class="chat-header">
+                <h2><i class="fas fa-comments"></i> Debate Transcript</h2>
+            </div>
+            
+            <div class="chat-messages" id="chat-messages">
+                <div class="message system-message">
+                    Debate started: "Resolved: Artificial Intelligence will have a net positive impact on humanity"
+                </div>
+                
+                <div class="message received">
+                    <div class="message-header">
+                        <span>Alex Johnson</span>
+                        <span>10:15 AM</span>
+                    </div>
+                    <div class="message-content">
+                        I'd like to start by pointing out that AI has already revolutionized healthcare with faster diagnostics and personalized treatment plans.
+                    </div>
+                </div>
+                
+                <div class="message sent">
+                    <div class="message-header">
+                        <span>Sarah Williams</span>
+                        <span>10:17 AM</span>
+                    </div>
+                    <div class="message-content">
+                        While that's true, we can't ignore the significant job displacement that AI automation is causing in manufacturing and service industries.
+                    </div>
+                </div>
+                
+                <div class="message received">
+                    <div class="message-header">
+                        <span>Alex Johnson</span>
+                        <span>10:19 AM</span>
+                    </div>
+                    <div class="message-content">
+                        History shows us that technological advancements create more jobs than they eliminate. AI will create new opportunities in tech and other sectors.
+                    </div>
+                </div>
+                
+                <div class="message sent">
+                    <div class="message-header">
+                        <span>Sarah Williams</span>
+                        <span>10:21 AM</span>
+                    </div>
+                    <div class="message-content">
+                        But the transition will be painful for many workers, especially those without technical skills. We need to consider the human cost.
+                    </div>
+                </div>
+                
+                <div class="message system-message">
+                    Sarah Williams has requested to speak
+                </div>
+            </div>
+            
+            <div class="chat-input">
+                <textarea id="message-input" placeholder="Type your message or argument..."></textarea>
+                <button id="send-btn"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
+        
+        <!-- Controls Section -->
+        <div class="controls-section">
+            <!-- Timer -->
+            <div class="timer-container">
+                <h3><i class="fas fa-clock"></i> DEBATE TIMER</h3>
+                <div class="timer-display" id="timer">10:00</div>
+                <div class="timer-controls">
+                    <button class="timer-btn" id="start-timer"><i class="fas fa-play"></i> Start</button>
+                    <button class="timer-btn" id="pause-timer"><i class="fas fa-pause"></i> Pause</button>
+                    <button class="timer-btn" id="reset-timer"><i class="fas fa-redo"></i> Reset</button>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <button class="action-btn speak active" id="request-speak">
+                    <i class="fas fa-hand-paper"></i> Request to Speak
+                </button>
+                
+                <button class="action-btn" id="yield-speak">
+                    <i class="fas fa-forward"></i> Yield Speaking Time
+                </button>
+                
+                <button class="action-btn" id="add-time">
+                    <i class="fas fa-plus-circle"></i> Add 30 Seconds
+                </button>
+                
+                <button class="action-btn" id="point-order">
+                    <i class="fas fa-gavel"></i> Point of Order
+                </button>
+                
+                <button class="action-btn end" id="end-debate">
+                    <i class="fas fa-flag-checkered"></i> End Debate
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Footer -->
+    <div class="footer">
+        <p>Debate Platform &copy; 2023 | All debates are recorded and stored for educational purposes</p>
+    </div>
+    
+    <script>
+        // DOM Elements
+        const notification = document.getElementById('notification');
+        const notificationText = document.getElementById('notification-text');
+        const timerDisplay = document.getElementById('timer');
+        const chatMessages = document.getElementById('chat-messages');
+        const messageInput = document.getElementById('message-input');
+        const sendBtn = document.getElementById('send-btn');
+        const requestSpeakBtn = document.getElementById('request-speak');
+        const yieldSpeakBtn = document.getElementById('yield-speak');
+        const endDebateBtn = document.getElementById('end-debate');
+        const startTimerBtn = document.getElementById('start-timer');
+        const pauseTimerBtn = document.getElementById('pause-timer');
+        const resetTimerBtn = document.getElementById('reset-timer');
+        const participant1 = document.getElementById('participant-1');
+        const participant2 = document.getElementById('participant-2');
+        
+        // Debate state
+        let debateState = {
+            currentSpeaker: 'participant-1',
+            timeRemaining: 600, // 10 minutes in seconds
+            timerActive: false,
+            debateTopic: "Resolved: Artificial Intelligence will have a net positive impact on humanity",
+            participants: [
+                { id: 'participant-1', name: 'Alex Johnson', role: 'For the Motion', speaking: true },
+                { id: 'participant-2', name: 'Sarah Williams', role: 'Against the Motion', speaking: false }
+            ],
+            messages: []
+        };
+        
+        // Show notification
+        function showNotification(message) {
+            notificationText.textContent = message;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        // Timer functionality
+        let timerInterval;
+        
+        function startTimer() {
+            if (debateState.timerActive) return;
+            
+            debateState.timerActive = true;
+            timerInterval = setInterval(updateTimer, 1000);
+            showNotification("Debate timer started");
+        }
+        
+        function pauseTimer() {
+            debateState.timerActive = false;
+            clearInterval(timerInterval);
+            showNotification("Debate timer paused");
+        }
+        
+        function resetTimer() {
+            debateState.timeRemaining = 600;
+            updateTimerDisplay();
+            showNotification("Timer reset to 10:00");
+        }
+        
+        function updateTimer() {
+            if (debateState.timeRemaining <= 0) {
+                clearInterval(timerInterval);
+                debateState.timerActive = false;
+                showNotification("Debate time has ended!");
+                return;
+            }
+            
+            debateState.timeRemaining--;
+            updateTimerDisplay();
+        }
+        
+        function updateTimerDisplay() {
+            const minutes = Math.floor(debateState.timeRemaining / 60);
+            const seconds = debateState.timeRemaining % 60;
+            timerDisplay.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+            
+            // Change color when time is running low
+            if (minutes < 1) {
+                timerDisplay.style.color = '#e74c3c';
+            } else if (minutes < 3) {
+                timerDisplay.style.color = '#f39c12';
+            } else {
+                timerDisplay.style.color = '#2ecc71';
+            }
+        }
+        
+        // Switch speaker
+        function switchSpeaker() {
+            if (debateState.currentSpeaker === 'participant-1') {
+                debateState.currentSpeaker = 'participant-2';
+                participant1.classList.remove('active');
+                participant2.classList.add('active');
+                debateState.participants[0].speaking = false;
+                debateState.participants[1].speaking = true;
+                showNotification(`${debateState.participants[1].name} is now speaking`);
+            } else {
+                debateState.currentSpeaker = 'participant-1';
+                participant2.classList.remove('active');
+                participant1.classList.add('active');
+                debateState.participants[1].speaking = false;
+                debateState.participants[0].speaking = true;
+                showNotification(`${debateState.participants[0].name} is now speaking`);
+            }
+            
+            // Reset timer to 1 minute for each speaking turn
+            debateState.timeRemaining = 60;
+            updateTimerDisplay();
+        }
+        
+        // Add a message to the chat
+        function addMessage(user, content, isSystem = false) {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            if (isSystem) {
+                const systemMsg = document.createElement('div');
+                systemMsg.className = 'message system-message';
+                systemMsg.textContent = content;
+                chatMessages.appendChild(systemMsg);
+            } else {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${user === 'Sarah Williams' ? 'sent' : 'received'}`;
+                
+                messageDiv.innerHTML = `
+                    <div class="message-header">
+                        <span>${user}</span>
+                        <span>${timeString}</span>
+                    </div>
+                    <div class="message-content">${content}</div>
+                `;
+                
+                chatMessages.appendChild(messageDiv);
+            }
+            
+            // Scroll to bottom
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        // Request to speak
+        function requestToSpeak() {
+            if (debateState.currentSpeaker === 'participant-1') {
+                showNotification("You've requested to speak to Alex Johnson");
+                addMessage('System', 'Sarah Williams has requested to speak', true);
+            } else {
+                showNotification("You've requested to speak to Sarah Williams");
+                addMessage('System', 'Alex Johnson has requested to speak', true);
+            }
+        }
+        
+        // End debate
+        function endDebate() {
+            if (confirm("Are you sure you want to end the debate?")) {
+                pauseTimer();
+                showNotification("Debate has ended");
+                addMessage('System', 'Debate has been concluded by the moderator', true);
+                endDebateBtn.disabled = true;
+                
+                // Show export option
+                setTimeout(() => {
+                    showNotification("Debate transcript is ready for export");
+                }, 2000);
+            }
+        }
+        
+        // Event Listeners
+        startTimerBtn.addEventListener('click', startTimer);
+        pauseTimerBtn.addEventListener('click', pauseTimer);
+        resetTimerBtn.addEventListener('click', resetTimer);
+        
+        sendBtn.addEventListener('click', () => {
+            if (messageInput.value.trim() !== '') {
+                addMessage('Sarah Williams', messageInput.value);
+                messageInput.value = '';
+            }
+        });
+        
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendBtn.click();
+            }
+        });
+        
+        requestSpeakBtn.addEventListener('click', requestToSpeak);
+        
+        yieldSpeakBtn.addEventListener('click', () => {
+            showNotification("You've yielded speaking time");
+            switchSpeaker();
+        });
+        
+        endDebateBtn.addEventListener('click', endDebate);
+        
+        // Toggle buttons
+        document.querySelectorAll('.control-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                this.classList.toggle('active');
+                
+                if (this.id.includes('mic')) {
+                    showNotification("Microphone " + (this.classList.contains('active') ? "muted" : "unmuted"));
+                } else if (this.id.includes('cam')) {
+                    showNotification("Camera " + (this.classList.contains('active') ? "disabled" : "enabled"));
+                } else if (this.id.includes('vol')) {
+                    showNotification("Volume " + (this.classList.contains('active') ? "muted" : "unmuted"));
+                }
+            });
+        });
+        
+        // Initialize
+        updateTimerDisplay();
+        addMessage('System', `Debate topic: ${debateState.debateTopic}`, true);
+        
+        // Demo auto messages
+        setTimeout(() => {
+            addMessage('Alex Johnson', 'We must also consider the environmental benefits of AI optimization in energy grids and transportation systems.');
+        }, 10000);
+        
+        setTimeout(() => {
+            addMessage('Sarah Williams', 'But AI systems themselves have a massive carbon footprint that's often overlooked in these discussions.');
+        }, 15000);
+        
+        setTimeout(() => {
+            switchSpeaker();
+        }, 30000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+{
+  "id": "d34198b0",
+  "topic": "Large Language Model",
+  "creator": "Taha Sadikot",
+  "time_limit": 10,
+  "participants": [
+    "Taha Sadikot",
+    "taha.sadikot.m@gmail.com"
+  ],
+  "status": "ended",
+  "messages": [
+    {
+      "user": "taha.sadikot.m@gmail.com",
+      "text": "hello my name is and I am currently studying in my National Institute of Technology Kurukshetra Haryana India and I am testing how the testing platform of a debate platform that I have created",
+      "timestamp": "05:11:29"
+    },
+    {
+      "user": "taha.sadikot.m@gmail.com",
+      "text": "hello my name is Taj e court and I am currently  recording this data to taste the platform  and I am testing out this platform to daddy in hello my name is Taj hotel I am testing out this platform very pretty girls",
+      "timestamp": "05:12:19"
+    },
+    {
+      "user": "Taha Sadikot",
+      "text": "Hello. My name is Taha Sadhikur and I am testing out the other user very rigorously.",
+      "timestamp": "05:12:32"
+    }
+  ],
+  "created_at": "2025-06-14T05:09:24.304553",
+  "current_speaker": "taha.sadikot.m@gmail.com",
+  "speaker_timer": 1749858152.8133917,
+  "turn_duration": 120,
+  "ended_at": "2025-06-14T05:12:41.591246"
+}

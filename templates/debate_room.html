@@ -1,0 +1,558 @@
+<!-- templates/debate_room.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debate Room - {{ debate.topic }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/simple-peer/9.11.1/simplepeer.min.js"></script>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <div class="container debate-room">
+        <header>
+            <h1>{{ debate.topic }}</h1>
+            <div class="info">
+                <span>ID: {{ debate.id }}</span>
+                <span>Participants: {{ debate.participants|join(', ') }}</span>
+                <div class="timer" id="timer">{{ debate.time_limit }}:00</div>
+            </div>
+        </header>
+
+        <div class="participants-section">
+            <div class="participant" id="local-participant">
+                <div class="video-container" id="local-video">
+                    <div class="video-placeholder">
+                        <i class="fas fa-user"></i>
+                        <p>{{ username }}</p>
+                    </div>
+                </div>
+                <div class="video-controls">
+                    <button class="control-btn" id="mic-btn">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <button class="control-btn" id="cam-btn">
+                        <i class="fas fa-video"></i>
+                    </button>
+                    <button class="control-btn speak-btn" id="request-speak-btn">
+                        <i class="fas fa-hand-paper"></i> Request to Speak
+                    </button>
+                    <button class="control-btn" id="end-turn-btn">
+                        <i class="fas fa-forward"></i> End Turn
+                    </button>
+                </div>
+            </div>
+            
+            <div class="participant" id="remote-participant">
+                <div class="video-container" id="remote-video">
+                    <div class="video-placeholder">
+                        <i class="fas fa-user"></i>
+                        <p>{% if other_participant %}{{ other_participant }}{% else %}Waiting for opponent{% endif %}</p>
+                    </div>
+                </div>
+                <div class="speaker-indicator" id="speaker-indicator">
+                    Current Speaker: {{ debate.current_speaker if debate.current_speaker else 'None' }}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Enhanced speech-to-text container -->
+        <div class="speech-container" id="speech-container">
+            <div class="speech-header">
+                <div id="speech-status">Speech Recognition: <span id="speech-status-text">Ready</span></div>
+                <button id="toggle-speech-btn" class="control-btn">
+                    <i class="fas fa-microphone-alt"></i> Enable Speech
+                </button>
+            </div>
+            <div class="transcript-container">
+                <div id="interim-transcript" class="interim-transcript"></div>
+                <div id="final-transcript" class="final-transcript"></div>
+            </div>
+        </div>
+
+        <div class="chat-container" id="chat-container">
+            <!-- Messages will appear here -->
+        </div>
+
+        <div class="input-area">
+            <textarea id="message-input" placeholder="Type your argument..."></textarea>
+            <button id="send-btn">Send</button>
+            <button id="end-debate">End Debate</button>
+        </div>
+    </div>
+
+    <script>
+        // Get debate data from server
+        const debateId = "{{ debate.id }}";
+        const username = "{{ username }}";
+        const isCreator = {{ 'true' if is_creator else 'false' }};
+        const otherParticipant = "{{ other_participant }}";
+        const turnDuration = 120; // 2 minutes per turn
+        
+        // DOM elements
+        const chatContainer = document.getElementById('chat-container');
+        const messageInput = document.getElementById('message-input');
+        const sendBtn = document.getElementById('send-btn');
+        const endDebateBtn = document.getElementById('end-debate');
+        const timerDisplay = document.getElementById('timer');
+        const speakerIndicator = document.getElementById('speaker-indicator');
+        const requestSpeakBtn = document.getElementById('request-speak-btn');
+        const endTurnBtn = document.getElementById('end-turn-btn');
+        const localVideoContainer = document.getElementById('local-video');
+        const remoteVideoContainer = document.getElementById('remote-video');
+        const micBtn = document.getElementById('mic-btn');
+        const camBtn = document.getElementById('cam-btn');
+        const speechStatus = document.getElementById('speech-status-text');
+        const interimTranscript = document.getElementById('interim-transcript');
+        const finalTranscript = document.getElementById('final-transcript');
+        const toggleSpeechBtn = document.getElementById('toggle-speech-btn');
+        
+        // Speech recognition variables
+        let recognition = null;
+        let finalSpeech = '';
+        let isSpeechEnabled = false;
+        let isListening = false;
+        let speechRecognitionSupported = false;
+        
+        // Socket.IO connection
+        const socket = io();
+        
+        // WebRTC variables
+        let peer = null;
+        let localStream = null;
+        let remoteStream = null;
+        
+        // Timer variables
+        let timeLeft = {{ debate.time_limit * 60 }};
+        let timerInterval = null;
+        let speakerTimeLeft = turnDuration;
+        let speakerTimerInterval = null;
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            // Join the debate room
+            socket.emit('join', {
+                debate_id: debateId,
+                username: username
+            });
+            
+            // Initialize WebRTC and speech recognition
+            initWebRTC();
+            initSpeechRecognition();
+            
+            // Set up event listeners
+            setupEventListeners();
+            
+            // Start timers
+            startDebateTimer();
+            
+            // Add initial system message
+            addSystemMessage(`Debate started: "${debateId}"`);
+        });
+        
+        // Initialize WebRTC
+        async function initWebRTC() {
+            try {
+                // Get local media stream
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    video: true,
+                    audio: true
+                });
+                
+                // Display local video
+                const localVideo = document.createElement('video');
+                localVideo.srcObject = localStream;
+                localVideo.autoplay = true;
+                localVideo.muted = true;
+                localVideo.className = 'video-feed';
+                
+                localVideoContainer.innerHTML = '';
+                localVideoContainer.appendChild(localVideo);
+                
+                // Create peer connection if opponent is present
+                if (otherParticipant) {
+                    createPeerConnection();
+                }
+            } catch (err) {
+                console.error('Error accessing media devices:', err);
+                addSystemMessage('Could not access camera/microphone. Using audio only.');
+            }
+        }
+        
+        // Initialize speech recognition
+        function initSpeechRecognition() {
+            // Check for browser support
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.continuous = true;
+                recognition.interimResults = true;
+                recognition.lang = 'en-US';
+                speechRecognitionSupported = true;
+                
+                recognition.onstart = () => {
+                    isListening = true;
+                    updateSpeechStatus('Listening...', '#2ecc71');
+                };
+                
+                recognition.onerror = (event) => {
+                    console.error('Speech recognition error', event.error);
+                    updateSpeechStatus(`Error: ${event.error}`, '#e74c3c');
+                    isListening = false;
+                };
+                
+                recognition.onend = () => {
+                    isListening = false;
+                    // Only update status if not manually stopped
+                    if (isSpeechEnabled) {
+                        updateSpeechStatus('Ready', '#3498db');
+                    }
+                };
+                
+                recognition.onresult = (event) => {
+                    let interim = '';
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        if (event.results[i].isFinal) {
+                            finalSpeech += event.results[i][0].transcript + ' ';
+                        } else {
+                            interim += event.results[i][0].transcript;
+                        }
+                    }
+                    
+                    // Update UI
+                    finalTranscript.textContent = finalSpeech;
+                    interimTranscript.textContent = interim;
+                    
+                    // Auto scroll
+                    interimTranscript.scrollTop = interimTranscript.scrollHeight;
+                    finalTranscript.scrollTop = finalTranscript.scrollHeight;
+                };
+                
+                updateSpeechStatus('Ready - Click to Enable', '#3498db');
+            } else {
+                console.warn('Speech recognition not supported in this browser');
+                updateSpeechStatus('Not supported in this browser', '#e74c3c');
+                toggleSpeechBtn.disabled = true;
+            }
+        }
+        
+        // Update speech status display
+        function updateSpeechStatus(text, color = '#3498db') {
+            speechStatus.textContent = text;
+            speechStatus.style.color = color;
+        }
+        
+        // Toggle speech recognition
+        function toggleSpeechRecognition() {
+            if (!speechRecognitionSupported) return;
+            
+            isSpeechEnabled = !isSpeechEnabled;
+            
+            if (isSpeechEnabled) {
+                toggleSpeechBtn.innerHTML = '<i class="fas fa-microphone-alt-slash"></i> Disable Speech';
+                toggleSpeechBtn.classList.add('active');
+                updateSpeechStatus('Ready', '#3498db');
+                
+                // If it's our turn, start listening immediately
+                if (debates[debateId]?.current_speaker === username) {
+                    startSpeechRecognition();
+                }
+            } else {
+                toggleSpeechBtn.innerHTML = '<i class="fas fa-microphone-alt"></i> Enable Speech';
+                toggleSpeechBtn.classList.remove('active');
+                updateSpeechStatus('Disabled', '#7f8c8d');
+                stopSpeechRecognition();
+            }
+        }
+        
+        // Start speech recognition
+        function startSpeechRecognition() {
+            if (recognition && isSpeechEnabled && !isListening) {
+                finalSpeech = '';
+                interimTranscript.textContent = '';
+                finalTranscript.textContent = '';
+                
+                try {
+                    recognition.start();
+                } catch (error) {
+                    console.error('Error starting speech recognition:', error);
+                    updateSpeechStatus(`Error: ${error}`, '#e74c3c');
+                }
+            }
+        }
+        
+        // Stop speech recognition and send message
+        function stopSpeechRecognition() {
+            if (recognition && isListening) {
+                recognition.stop();
+                
+                // Send the final speech as message if not empty
+                if (finalSpeech.trim() !== '') {
+                    socket.emit('send_message', {
+                        debate_id: debateId,
+                        username: username,
+                        text: finalSpeech.trim()
+                    });
+                }
+                
+                // Reset for next time
+                finalSpeech = '';
+            }
+        }
+        
+        // Create peer connection
+        function createPeerConnection() {
+            peer = new SimplePeer({
+                initiator: isCreator,
+                stream: localStream,
+                trickle: false
+            });
+            
+            peer.on('signal', data => {
+                // Send signaling data to opponent
+                socket.emit('signal', {
+                    debate_id: debateId,
+                    target_sid: 'opponent', // This would be the opponent's SID in a real implementation
+                    signal: data
+                });
+            });
+            
+            peer.on('stream', stream => {
+                // Display remote video
+                remoteStream = stream;
+                const remoteVideo = document.createElement('video');
+                remoteVideo.srcObject = stream;
+                remoteVideo.autoplay = true;
+                remoteVideo.className = 'video-feed';
+                
+                remoteVideoContainer.innerHTML = '';
+                remoteVideoContainer.appendChild(remoteVideo);
+            });
+            
+            peer.on('connect', () => {
+                console.log('WebRTC connected');
+                addSystemMessage('Peer connection established');
+            });
+            
+            peer.on('error', err => {
+                console.error('WebRTC error:', err);
+                addSystemMessage('Connection error: ' + err.message);
+            });
+        }
+        
+        // Set up event listeners
+        function setupEventListeners() {
+            // Socket events
+            socket.on('message', data => {
+                addMessage(data.user, data.text);
+            });
+            
+            socket.on('set_speaker', data => {
+                speakerIndicator.textContent = `Current Speaker: ${data.speaker}`;
+                speakerTimeLeft = turnDuration; // Reset timer
+                updateSpeakerTimer();
+                
+                // Start/restart timer
+                if (speakerTimerInterval) {
+                    clearInterval(speakerTimerInterval);
+                }
+                speakerTimerInterval = setInterval(updateSpeakerTimer, 1000);
+                
+                addSystemMessage(`${data.speaker} is now speaking`);
+                
+                // Start speech recognition if it's the current user and speech is enabled
+                if (data.speaker === username && isSpeechEnabled) {
+                    startSpeechRecognition();
+                } else if (data.speaker !== username && isListening) {
+                    // Stop speech recognition when it's not our turn
+                    stopSpeechRecognition();
+                }
+            });
+            
+            socket.on('debate_ended', data => {
+                addSystemMessage(`Debate ended by ${data.by}`);
+                clearInterval(timerInterval);
+                if (speakerTimerInterval) {
+                    clearInterval(speakerTimerInterval);
+                }
+                
+                // Stop speech recognition
+                stopSpeechRecognition();
+                
+                // Disable buttons
+                messageInput.disabled = true;
+                sendBtn.disabled = true;
+                requestSpeakBtn.disabled = true;
+                endTurnBtn.disabled = true;
+                endDebateBtn.disabled = true;
+                toggleSpeechBtn.disabled = true;
+                
+                // Save transcript
+                fetch(`/save/${debateId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            addSystemMessage(`Debate saved as ${data.filename}`);
+                        }
+                    });
+            });
+            
+            socket.on('debate_state', data => {
+                speakerIndicator.textContent = `Current Speaker: ${data.current_speaker}`;
+                speakerTimeLeft = data.speaker_time_left;
+                updateSpeakerTimer();
+                
+                if (speakerTimerInterval) {
+                    clearInterval(speakerTimerInterval);
+                }
+                speakerTimerInterval = setInterval(updateSpeakerTimer, 1000);
+                
+                // Start speech recognition if it's the current user and speech is enabled
+                if (data.current_speaker === username && isSpeechEnabled) {
+                    startSpeechRecognition();
+                }
+            });
+            
+            // UI events
+            sendBtn.addEventListener('click', sendMessage);
+            messageInput.addEventListener('keypress', e => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+            
+            requestSpeakBtn.addEventListener('click', () => {
+                socket.emit('request_speak', {
+                    debate_id: debateId,
+                    username: username
+                });
+            });
+            
+            endTurnBtn.addEventListener('click', () => {
+                // Stop speech recognition and send final transcript
+                stopSpeechRecognition();
+                
+                socket.emit('end_turn', {
+                    debate_id: debateId,
+                    username: username
+                });
+            });
+            
+            endDebateBtn.addEventListener('click', () => {
+                if (confirm("Are you sure you want to end the debate?")) {
+                    socket.emit('end_debate', {
+                        debate_id: debateId,
+                        username: username
+                    });
+                }
+            });
+            
+            // Speech toggle button
+            toggleSpeechBtn.addEventListener('click', toggleSpeechRecognition);
+            
+            // Control buttons
+            micBtn.addEventListener('click', function() {
+                this.classList.toggle('active');
+                if (localStream) {
+                    localStream.getAudioTracks().forEach(track => {
+                        track.enabled = !this.classList.contains('active');
+                    });
+                }
+            });
+            
+            camBtn.addEventListener('click', function() {
+                this.classList.toggle('active');
+                if (localStream) {
+                    localStream.getVideoTracks().forEach(track => {
+                        track.enabled = !this.classList.contains('active');
+                    });
+                }
+            });
+        }
+        
+        // Start debate timer
+        function startDebateTimer() {
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    timeLeft = 0;
+                    addSystemMessage('Debate time has ended');
+                    socket.emit('end_debate', {
+                        debate_id: debateId,
+                        username: 'System'
+                    });
+                }
+                
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                timerDisplay.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+            }, 1000);
+        }
+        
+        // Update speaker timer
+        function updateSpeakerTimer() {
+            speakerTimeLeft--;
+            
+            if (speakerTimeLeft <= 0) {
+                clearInterval(speakerTimerInterval);
+                speakerTimeLeft = 0;
+                addSystemMessage('Speaker time has ended');
+                
+                // End turn automatically when time runs out
+                if (debates[debateId]?.current_speaker === username) {
+                    stopSpeechRecognition();
+                    socket.emit('end_turn', {
+                        debate_id: debateId,
+                        username: username
+                    });
+                }
+            }
+        }
+        
+        // Send message
+        function sendMessage() {
+            const text = messageInput.value.trim();
+            if (text) {
+                socket.emit('send_message', {
+                    debate_id: debateId,
+                    username: username,
+                    text: text
+                });
+                messageInput.value = '';
+            }
+        }
+        
+        // Add message to chat
+        function addMessage(user, text) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${user === username ? 'sent' : 'received'}`;
+            
+            const now = new Date();
+            const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            messageDiv.innerHTML = `
+                <div class="message-header">
+                    <strong>${user}</strong>
+                    <span>${timeString}</span>
+                </div>
+                <div class="message-content">${text}</div>
+            `;
+            
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        // Add system message
+        function addSystemMessage(text) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'system-msg';
+            messageDiv.textContent = text;
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+    </script>
+</body>
+</html>
